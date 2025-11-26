@@ -1,8 +1,8 @@
-import faiss
-import numpy as np
+import faiss  # type: ignore
+import numpy as np  # type: ignore
 import json
 import os
-from typing import List, Dict, Optional, Tuple
+from typing import List, Dict, Optional, Tuple, Any
 from config import Config
 import logging
 
@@ -16,8 +16,8 @@ class FAISSService:
         self.dimension = Config.EMBEDDING_DIMENSION
         self.index_path = Config.FAISS_INDEX_PATH
         self.metadata_path = Config.FAISS_METADATA_PATH
-        self.index = None
-        self.metadata = []
+        self.index: Any = None  # FAISS Index type
+        self.metadata: List[Dict] = []
         self.initialize_index()
 
     def initialize_index(self):

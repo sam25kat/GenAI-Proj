@@ -1,5 +1,6 @@
 from openai import OpenAI
-from typing import List, Optional, Dict
+from openai.types.chat import ChatCompletionMessageParam
+from typing import List, Optional, Dict, Iterable
 from config import Config
 import logging
 import json
@@ -53,7 +54,10 @@ Respond with ONLY the category name, nothing else."""
                 temperature=0.3,
                 max_tokens=20
             )
-            intent = response.choices[0].message.content.strip().lower()
+            content = response.choices[0].message.content
+            if not content:
+                return "conversation"
+            intent = content.strip().lower()
             return intent
         except Exception as e:
             logger.error(f"Error detecting intent: {e}")
@@ -87,13 +91,16 @@ Respond with ONLY the domain name, nothing else."""
                 temperature=0.3,
                 max_tokens=20
             )
-            domain = response.choices[0].message.content.strip().lower()
+            content = response.choices[0].message.content
+            if not content:
+                return "general"
+            domain = content.strip().lower()
             return domain
         except Exception as e:
             logger.error(f"Error detecting domain: {e}")
             return "general"
 
-    def generate_response(self, messages: List[Dict[str, str]]) -> Optional[str]:
+    def generate_response(self, messages: Iterable[ChatCompletionMessageParam]) -> Optional[str]:
         """Generate LLM response given conversation messages"""
         try:
             response = self.client.chat.completions.create(
@@ -102,7 +109,10 @@ Respond with ONLY the domain name, nothing else."""
                 temperature=0.7,
                 max_tokens=1000
             )
-            return response.choices[0].message.content
+            content = response.choices[0].message.content
+            if not content:
+                return None
+            return content
         except Exception as e:
             logger.error(f"Error generating response: {e}")
             return None
@@ -134,7 +144,10 @@ Return ONLY a JSON object with 'tone' and 'complexity' keys."""
                 max_tokens=50
             )
 
-            result = json.loads(response.choices[0].message.content)
+            content = response.choices[0].message.content
+            if not content:
+                return {"tone": "neutral", "complexity": "medium"}
+            result = json.loads(content)
             return result
         except Exception as e:
             logger.error(f"Error analyzing user style: {e}")

@@ -1,4 +1,5 @@
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, cast
+from openai.types.chat import ChatCompletionMessageParam
 from services.db_service import DatabaseService
 from services.openai_service import OpenAIService
 from services.faiss_service import FAISSService
@@ -66,6 +67,10 @@ class PromptEngine:
                 recent_context
             )
             response = self.openai.generate_response(conversation_messages)
+
+            # Handle case where response generation fails
+            if not response:
+                raise Exception("Failed to generate response from OpenAI")
 
             # Step 7: Save to database
             user_msg_id = self.db.save_message(
@@ -244,7 +249,12 @@ Provide ONLY the refined query, nothing else. If the query is already clear and 
                 max_tokens=150
             )
 
-            refined_query = refined.choices[0].message.content.strip()
+            # Get the refined query content with None check
+            refined_content = refined.choices[0].message.content
+            if not refined_content:
+                return user_message
+
+            refined_query = refined_content.strip()
 
             # If refinement failed or is too different, return original
             if not refined_query or len(refined_query) > len(user_message) * 2:
@@ -261,28 +271,28 @@ Provide ONLY the refined query, nothing else. If the query is already clear and 
         self,
         enhanced_prompt: str,
         recent_context: List[Dict]
-    ) -> List[Dict[str, str]]:
+    ) -> List[ChatCompletionMessageParam]:
         """Prepare messages array for OpenAI API"""
 
-        messages = [
-            {
+        messages: List[ChatCompletionMessageParam] = [
+            cast(ChatCompletionMessageParam, {
                 "role": "system",
                 "content": "You are PromptSense, an intelligent assistant that provides personalized, context-aware responses. Pay attention to the user profile, intent, and context provided in the enhanced prompt."
-            }
+            })
         ]
 
         # Add recent context (last 3 exchanges)
         for ctx in recent_context[-6:]:
-            messages.append({
+            messages.append(cast(ChatCompletionMessageParam, {
                 "role": ctx['role'],
                 "content": ctx['content']
-            })
+            }))
 
         # Add current enhanced prompt
-        messages.append({
+        messages.append(cast(ChatCompletionMessageParam, {
             "role": "user",
             "content": enhanced_prompt
-        })
+        }))
 
         return messages
 

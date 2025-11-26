@@ -4,6 +4,7 @@ from typing import List, Dict, Optional
 from config import Config
 import logging
 import json
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -14,14 +15,26 @@ class DatabaseService:
     def __init__(self):
         self.connection_string = Config.DATABASE_URL
 
-    def get_connection(self):
-        """Get a database connection"""
-        try:
-            conn = psycopg2.connect(self.connection_string)
-            return conn
-        except Exception as e:
-            logger.error(f"Database connection error: {e}")
-            raise
+    def get_connection(self, retries=3, delay=1):
+        """Get a database connection with retry logic"""
+        for attempt in range(retries):
+            try:
+                conn = psycopg2.connect(
+                    self.connection_string,
+                    connect_timeout=10,
+                    keepalives=1,
+                    keepalives_idle=30,
+                    keepalives_interval=10,
+                    keepalives_count=5
+                )
+                return conn
+            except Exception as e:
+                if attempt < retries - 1:
+                    logger.warning(f"Database connection attempt {attempt + 1} failed, retrying in {delay}s: {e}")
+                    time.sleep(delay)
+                else:
+                    logger.error(f"Database connection error after {retries} attempts: {e}")
+                    raise
 
     def get_user(self, user_id: int) -> Optional[Dict]:
         """Get user by ID"""
@@ -81,7 +94,10 @@ class DatabaseService:
                         (user_id, role, content, conversation_id, original_prompt, enhanced_prompt,
                          intent, domain, vector_saved, Json(metadata or {}))
                     )
-                    message_id = cur.fetchone()[0]
+                    result = cur.fetchone()
+                    if not result:
+                        return None
+                    message_id = result[0]
                     conn.commit()
                     return message_id
         except Exception as e:
@@ -221,7 +237,10 @@ class DatabaseService:
                         """,
                         (user_id, title)
                     )
-                    conversation_id = cur.fetchone()[0]
+                    result = cur.fetchone()
+                    if not result:
+                        return None
+                    conversation_id = result[0]
                     conn.commit()
                     return conversation_id
         except Exception as e:

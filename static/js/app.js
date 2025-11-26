@@ -647,12 +647,19 @@ class PromptSenseApp {
         this.generatingTitles.add(conversationId);
 
         try {
-            await fetch(`${this.apiBase}/api/conversations/${conversationId}/generate-title`, {
+            const response = await fetch(`${this.apiBase}/api/conversations/${conversationId}/generate-title`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 }
             });
+
+            // If conversation doesn't exist (404), stop trying to generate title
+            if (response.status === 404) {
+                console.warn(`Conversation ${conversationId} not found, skipping title generation`);
+                this.generatingTitles.delete(conversationId);
+                return;
+            }
 
             // Reload conversations to show the new title after a short delay
             setTimeout(() => {

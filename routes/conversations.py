@@ -153,7 +153,11 @@ def generate_conversation_title(conversation_id):
                 temperature=0.7,
                 max_tokens=20
             )
-            title = response.choices[0].message.content.strip().strip('"\'')
+            content = response.choices[0].message.content
+            if content:
+                title = content.strip().strip('"\'')
+            else:
+                title = first_user_message['content'][:50] + ('...' if len(first_user_message['content']) > 50 else '')
         except:
             # Fallback: use first 50 chars of message
             title = first_user_message['content'][:50] + ('...' if len(first_user_message['content']) > 50 else '')
