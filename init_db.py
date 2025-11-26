@@ -1,13 +1,20 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """
 Database Initialization Script for PromptSense
 Run this script to set up the database schema and demo users
 """
 
 import sys
+import io
 from services.db_service import DatabaseService
 from config import Config
 import logging
+
+# Set UTF-8 encoding for Windows console
+if sys.platform == 'win32':
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

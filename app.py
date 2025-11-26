@@ -2,6 +2,8 @@ from flask import Flask, render_template, jsonify
 from flask_cors import CORS
 from routes.chat import chat_bp
 from routes.history import history_bp
+from routes.conversations import conversations_bp
+from routes.users import users_bp
 from config import Config
 import logging
 import sys
@@ -28,6 +30,8 @@ CORS(app)
 # Register blueprints
 app.register_blueprint(chat_bp)
 app.register_blueprint(history_bp)
+app.register_blueprint(conversations_bp)
+app.register_blueprint(users_bp)
 
 
 @app.route('/')

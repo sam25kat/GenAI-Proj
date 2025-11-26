@@ -23,6 +23,7 @@ def chat():
 
         message = data['message']
         user_id = data.get('user_id', 1)  # Default to demo user
+        conversation_id = data.get('conversation_id')  # Optional conversation ID
 
         # Validate message
         if not message or not message.strip():
@@ -32,7 +33,7 @@ def chat():
             }), 400
 
         # Process message through prompt engine
-        result = prompt_engine.process_user_message(user_id, message)
+        result = prompt_engine.process_user_message(user_id, message, conversation_id)
 
         return jsonify(result), 200
 

@@ -8,31 +8,49 @@
 </head>
 <body>
     <div class="app-container">
-        <!-- Header -->
-        <header class="app-header">
-            <div class="header-content">
-                <h1 class="app-title">
-                    <span class="icon">🧠</span>
-                    PromptSense
-                </h1>
-                <p class="app-subtitle">Context-Aware Prompt Personalization</p>
-            </div>
-            <div class="header-controls">
-                <div class="user-selector">
-                    <label for="userSelect">User:</label>
-                    <select id="userSelect" class="user-dropdown">
-                        <option value="1">Demo User (Beginner)</option>
-                        <option value="2">Advanced User</option>
-                    </select>
-                </div>
-                <button id="insightsBtn" class="btn btn-secondary">
-                    📊 Insights
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <button id="newChatBtn" class="btn btn-new-chat">
+                    <span class="plus-icon">+</span>
+                    New Chat
                 </button>
             </div>
-        </header>
+            <div class="sidebar-content">
+                <div class="conversations-list" id="conversationsList">
+                    <div class="loading-conversations">Loading conversations...</div>
+                </div>
+            </div>
+        </aside>
 
-        <!-- Main Chat Area -->
-        <main class="chat-container">
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Header -->
+            <header class="app-header">
+                <div class="header-left">
+                    <button id="mobileSidebarToggle" class="btn-icon">
+                        ☰
+                    </button>
+                    <div class="header-content">
+                        <h1 class="app-title">
+                            <span class="icon">🧠</span>
+                            PromptSense
+                        </h1>
+                        <p class="app-subtitle">Context-Aware Prompt Personalization</p>
+                    </div>
+                </div>
+                <div class="header-controls">
+                    <button id="settingsBtn" class="btn btn-secondary">
+                        ⚙️ Settings
+                    </button>
+                    <button id="insightsBtn" class="btn btn-secondary">
+                        📊 Insights
+                    </button>
+                </div>
+            </header>
+
+            <!-- Main Chat Area -->
+            <main class="chat-container">
             <div class="chat-messages" id="chatMessages">
                 <div class="welcome-message">
                     <div class="welcome-icon">👋</div>
@@ -73,6 +91,7 @@
                 </div>
             </div>
         </main>
+        </div>
 
         <!-- Insights Modal -->
         <div id="insightsModal" class="modal">
@@ -83,6 +102,74 @@
                 </div>
                 <div class="modal-body" id="insightsContent">
                     <div class="loading">Loading insights...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Modal -->
+        <div id="settingsModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>⚙️ Preferences & Settings</h2>
+                    <button class="modal-close" id="closeSettingsModal">&times;</button>
+                </div>
+                <div class="modal-body" id="settingsContent">
+                    <form id="settingsForm">
+                        <div class="settings-section">
+                            <h3>Expertise Level</h3>
+                            <p class="settings-description">How technical should responses be?</p>
+                            <div class="radio-group">
+                                <label class="radio-label">
+                                    <input type="radio" name="expertise_level" value="beginner">
+                                    <span>Beginner - Simple explanations with examples</span>
+                                </label>
+                                <label class="radio-label">
+                                    <input type="radio" name="expertise_level" value="intermediate" checked>
+                                    <span>Intermediate - Balance detail with clarity</span>
+                                </label>
+                                <label class="radio-label">
+                                    <input type="radio" name="expertise_level" value="advanced">
+                                    <span>Advanced - Detailed technical information</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="settings-section">
+                            <h3>Tone Preference</h3>
+                            <p class="settings-description">What tone should the AI use?</p>
+                            <div class="radio-group">
+                                <label class="radio-label">
+                                    <input type="radio" name="tone" value="friendly">
+                                    <span>Friendly - Warm and approachable</span>
+                                </label>
+                                <label class="radio-label">
+                                    <input type="radio" name="tone" value="professional">
+                                    <span>Professional - Concise and business-like</span>
+                                </label>
+                                <label class="radio-label">
+                                    <input type="radio" name="tone" value="casual">
+                                    <span>Casual - Relaxed and conversational</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="settings-section">
+                            <h3>Custom Instructions</h3>
+                            <p class="settings-description">Add custom instructions for how the AI should respond (optional)</p>
+                            <textarea
+                                id="customInstructions"
+                                name="custom_instructions"
+                                class="custom-instructions-input"
+                                placeholder="E.g., Always provide code examples, Focus on practical applications, Explain like I'm 5..."
+                                rows="4"
+                            ></textarea>
+                        </div>
+
+                        <div class="settings-actions">
+                            <button type="button" class="btn btn-secondary" id="cancelSettings">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Save Preferences</button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>

@@ -16,12 +16,17 @@ class PromptEngine:
         self.openai = OpenAIService()
         self.faiss = FAISSService()
 
-    def process_user_message(self, user_id: int, message: str) -> Dict:
+    def process_user_message(self, user_id: int, message: str, conversation_id: Optional[int] = None) -> Dict:
         """
         Main processing pipeline for user messages
         Returns: Dict with enhanced_prompt, response, metadata
         """
         try:
+            # If no conversation_id provided, create a new conversation
+            if conversation_id is None:
+                conversation_id = self.db.create_conversation(user_id)
+                if not conversation_id:
+                    raise Exception("Failed to create conversation")
             # Step 1: Get user profile and preferences
             user = self.db.get_user(user_id)
             if not user:
@@ -67,6 +72,7 @@ class PromptEngine:
                 user_id=user_id,
                 role="user",
                 content=message,
+                conversation_id=conversation_id,
                 original_prompt=message,
                 enhanced_prompt=enhanced_prompt,
                 intent=intent,
@@ -80,6 +86,7 @@ class PromptEngine:
                 user_id=user_id,
                 role="assistant",
                 content=response,
+                conversation_id=conversation_id,
                 intent=intent,
                 domain=domain
             )
@@ -99,6 +106,7 @@ class PromptEngine:
             return {
                 "success": True,
                 "response": response,
+                "conversation_id": conversation_id,
                 "original_prompt": message,
                 "enhanced_prompt": enhanced_prompt,
                 "metadata": {
@@ -159,34 +167,95 @@ class PromptEngine:
         # Personalization instructions
         instructions = []
 
-        if expertise_level == "beginner":
-            instructions.append("Explain concepts in simple terms with examples")
-        elif expertise_level == "advanced":
-            instructions.append("Provide detailed technical information")
+        # Check for custom instructions first
+        custom_instructions = user_preferences.get('custom_instructions', '').strip()
+
+        if custom_instructions:
+            # Use custom instructions if provided
+            instructions.append(custom_instructions)
         else:
-            instructions.append("Balance detail with clarity")
+            # Fall back to default instructions based on preferences
+            if expertise_level == "beginner":
+                instructions.append("Explain concepts in simple terms with examples")
+            elif expertise_level == "advanced":
+                instructions.append("Provide detailed technical information")
+            else:
+                instructions.append("Balance detail with clarity")
 
-        if tone == "friendly":
-            instructions.append("Use a warm, approachable tone")
-        elif tone == "professional":
-            instructions.append("Maintain a professional, concise tone")
+            if tone == "friendly":
+                instructions.append("Use a warm, approachable tone")
+            elif tone == "professional":
+                instructions.append("Maintain a professional, concise tone")
+            elif tone == "casual":
+                instructions.append("Use a relaxed, conversational tone")
 
-        if intent == "learning":
-            instructions.append("Focus on educational value and understanding")
-        elif intent == "problem_solving":
-            instructions.append("Provide actionable solutions and steps")
-        elif intent == "creative":
-            instructions.append("Be creative and offer diverse ideas")
+            if intent == "learning":
+                instructions.append("Focus on educational value and understanding")
+            elif intent == "problem_solving":
+                instructions.append("Provide actionable solutions and steps")
+            elif intent == "creative":
+                instructions.append("Be creative and offer diverse ideas")
 
         prompt_parts.append(f"[Instructions: {'. '.join(instructions)}]")
 
-        # Add the actual user message
-        prompt_parts.append(f"\nUser Query: {user_message}")
+        # Enhance/refine the user query
+        refined_query = self.refine_user_query(user_message, domain, intent)
+
+        # Show both original and refined if they differ significantly
+        if refined_query.lower() != user_message.lower():
+            prompt_parts.append(f"\nOriginal Query: {user_message}")
+            prompt_parts.append(f"Refined Query: {refined_query}")
+        else:
+            prompt_parts.append(f"\nUser Query: {user_message}")
 
         # Combine all parts
         enhanced_prompt = "\n".join(prompt_parts)
 
         return enhanced_prompt
+
+    def refine_user_query(self, user_message: str, domain: str, intent: str) -> str:
+        """
+        Refine and enhance the user's query by:
+        - Correcting spelling errors
+        - Making the query more specific and clear
+        - Adding relevant context based on domain/intent
+        """
+        try:
+            # Use GPT to refine the query
+            refinement_prompt = f"""You are a query refinement assistant. Your job is to improve user queries by:
+1. Correcting any spelling or grammar errors
+2. Making vague questions more specific
+3. Adding relevant context when needed
+4. Keeping the core intent intact
+
+Domain: {domain}
+Intent: {intent}
+Original Query: {user_message}
+
+Provide ONLY the refined query, nothing else. If the query is already clear and has no errors, return it as-is."""
+
+            refined = self.openai.client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": "You are a query refinement expert."},
+                    {"role": "user", "content": refinement_prompt}
+                ],
+                temperature=0.3,
+                max_tokens=150
+            )
+
+            refined_query = refined.choices[0].message.content.strip()
+
+            # If refinement failed or is too different, return original
+            if not refined_query or len(refined_query) > len(user_message) * 2:
+                return user_message
+
+            return refined_query
+
+        except Exception as e:
+            logger.error(f"Error refining query: {e}")
+            # Fall back to original message if refinement fails
+            return user_message
 
     def prepare_conversation_messages(
         self,
