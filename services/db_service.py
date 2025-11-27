@@ -27,7 +27,21 @@ class DatabaseService:
                     keepalives_interval=10,
                     keepalives_count=5
                 )
+                # Set autocommit to False to ensure transactions are explicit
+                conn.autocommit = False
                 return conn
+            except psycopg2.OperationalError as e:
+                if "server closed the connection unexpectedly" in str(e) or "server terminated abnormally" in str(e):
+                    if attempt < retries - 1:
+                        logger.warning(f"Connection lost, retrying attempt {attempt + 2}/{retries}...")
+                        time.sleep(delay * (attempt + 1))  # Exponential backoff
+                        continue
+                if attempt < retries - 1:
+                    logger.warning(f"Database connection attempt {attempt + 1} failed, retrying in {delay}s: {e}")
+                    time.sleep(delay)
+                else:
+                    logger.error(f"Database connection error after {retries} attempts: {e}")
+                    raise
             except Exception as e:
                 if attempt < retries - 1:
                     logger.warning(f"Database connection attempt {attempt + 1} failed, retrying in {delay}s: {e}")
